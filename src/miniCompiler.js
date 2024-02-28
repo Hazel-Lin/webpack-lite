@@ -8,16 +8,29 @@ const { transformFromAst } = require('@babel/core');
 
 module.exports = class Compiler {
   constructor(config) {
-    const { entry, output } = config;
+    const { entry, output, module } = config;
     // 入口文件
     this.entry = entry;
     this.output = output;
     this.config = config;
+    this.module = module;
+    this.rules = module.rules;
   }
   // 解析后返回对应的代码和依赖
   parse(filename) {
     // 读取入口文件 获取模块代码
-    const sourceCode = fs.readFileSync(filename, 'utf-8');
+    let sourceCode = fs.readFileSync(filename, 'utf-8');
+    // 处理 loader
+    // 从配置文件中获取 module.rules 遍历所有的rules
+    // 如果匹配到了文件类型 就使用对应的loader处理文件
+    // 这里只处理了一个loader
+    this.rules.forEach(({ loader, test: rule }) => {
+      // 先看看这个 filename 是不是符合这个loader 的
+      if (rule.test(filename)) {
+
+        sourceCode = loader(sourceCode);
+      }
+    });
     // 解析模块代码 根据 babel/parser 解析代码 生成抽象语法树
     const ast = parser.parse(sourceCode, { sourceType: "module" });
     // 抽象语法树 traverse 为字符串

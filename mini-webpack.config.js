@@ -13,7 +13,7 @@
 //   }
 // }
 const path = require('path');
-
+const jsonLoader = require('./example/jsonLoader');
 module.exports = {
   // 定义入口文件
   entry: './example/hi.js',
@@ -21,5 +21,13 @@ module.exports = {
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, './dist')
+  },
+  module: {
+    rules: [
+      {
+        test: /\.json$/,
+        loader: jsonLoader
+      }
+    ]
   }
 }
