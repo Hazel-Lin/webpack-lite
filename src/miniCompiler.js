@@ -15,9 +15,9 @@ module.exports = class Compiler {
     this.config = config;
   }
   // 解析后返回对应的代码和依赖
-  parse(entry) {
+  parse(filename) {
     // 读取入口文件 获取模块代码
-    const sourceCode = fs.readFileSync(entry, 'utf-8');
+    const sourceCode = fs.readFileSync(filename, 'utf-8');
     // 解析模块代码 根据 babel/parser 解析代码 生成抽象语法树
     const ast = parser.parse(sourceCode, { sourceType: "module" });
     // 抽象语法树 traverse 为字符串
@@ -32,19 +32,16 @@ module.exports = class Compiler {
     const { code } = transformFromAst(ast, null, {
       presets: ["@babel/preset-env"],
     });
-    return {
-      code,
-      deps
-    }
+    return { filename, deps, code };
   }
   // 处理依赖图
   buildDepsGraph(entry) {
-    // 递归调用 parse 函数
+    // 递归调用 parse 函数 解析所有文件 从入口开始找到所有文件之间的依赖关系
     const entryModule = this.parse(entry);
+    // 定义一个队列 目前只有与入口文件相关的模块  
     const graphArray = [entryModule];
-
-    for (let i = 0; i < graphArray.length; i++) {
-      const item = graphArray[i];
+    // for of 遍历 graphArray 这个队列
+    for (const item of graphArray) {
       const { deps } = item;
       if (deps) {
         for (let key in deps) {
@@ -55,10 +52,10 @@ module.exports = class Compiler {
     // 定义图
     const graph = {};
     graphArray.forEach(item => {
-      graph[entry] = {
+      graph[item.filename] = {
+        deps: item.deps,
         code: item.code,
-        deps: item.deps
-      }
+      };
     });
     return graph;
   }
@@ -77,7 +74,6 @@ module.exports = class Compiler {
         }
         require('${entry}')
     })(${graph})`;
-
   }
   // 输出文件
   emitFile(code) {
@@ -89,9 +85,10 @@ module.exports = class Compiler {
   }
   // 串联所有方法
   run() {
-    console.log('开始编译');
+    console.log('开始打包');
     const graph = JSON.stringify(this.buildDepsGraph(this.entry));
     const code = this.generateCode(graph, this.entry);
     this.emitFile(code);
+    console.log('打包完成');
   }
 }
