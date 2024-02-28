@@ -13,7 +13,6 @@ module.exports = class Compiler {
     this.entry = entry;
     this.output = output;
     this.config = config;
-    this.module = module;
     this.rules = module.rules;
   }
   // 解析后返回对应的代码和依赖
@@ -24,10 +23,9 @@ module.exports = class Compiler {
     // 从配置文件中获取 module.rules 遍历所有的rules
     // 如果匹配到了文件类型 就使用对应的loader处理文件
     // 这里只处理了一个loader
-    this.rules.forEach(({ loader, test: rule }) => {
+    this.rules.forEach(({ loader, test: _test }) => {
       // 先看看这个 filename 是不是符合这个loader 的
-      if (rule.test(filename)) {
-
+      if (_test.test(filename)) {
         sourceCode = loader(sourceCode);
       }
     });

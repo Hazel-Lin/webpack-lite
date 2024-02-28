@@ -14,6 +14,7 @@
 // }
 const path = require('path');
 const jsonLoader = require('./example/jsonLoader');
+const myLoader = require('./example/myLoader.js');
 module.exports = {
   // 定义入口文件
   entry: './example/hi.js',
@@ -24,10 +25,8 @@ module.exports = {
   },
   module: {
     rules: [
-      {
-        test: /\.json$/,
-        loader: jsonLoader
-      }
+      { test: /\.json$/, loader: jsonLoader },
+      { test: /\.js$/, loader:myLoader},
     ]
   }
 }
