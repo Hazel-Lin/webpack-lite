@@ -1,4 +1,2 @@
-function hi() {
-  console.log('hi');
-}
-hi()
+import message from "./message.js";
+console.log(message);
