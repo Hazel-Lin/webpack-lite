@@ -1,7 +1,8 @@
-# mini-webpack
+# webpack-lite
 
-通过实现 mini webpack 来学习其原理
+通过实现一个 mini webpack 来学习其原理
 
-- [ ] loader
+- [x] 打包核心逻辑
+- [x] loader
 - [ ] plugin
 - [ ] hmr
