@@ -14,21 +14,29 @@ module.exports = class Compiler {
     this.output = output;
     this.config = config;
     this.rules = module.rules;
+    // 初始化模块缓存 避免重复解析已经解析过的模块
+    this.modules = {};
   }
   // 解析后返回对应的代码和依赖
   parse(filename) {
     // 读取入口文件 获取模块代码
     let sourceCode = fs.readFileSync(filename, 'utf-8');
-    // 处理 loader
+    // 处理所有的 loader
     // 从配置文件中获取 module.rules 遍历所有的rules
     // 如果匹配到了文件类型 就使用对应的loader处理文件
-    // 这里只处理了一个loader
-    this.rules.forEach(({ loader, test: _test }) => {
-      // 先看看这个 filename 是不是符合这个loader 的
+    // loader 的执行顺序是从后往前执行的
+    // 如何实现多个 loader 的处理呢？
+    // 从后往前遍历所有的 loader
+    for (let rule of this.rules) {
+      const { use, test: _test } = rule
       if (_test.test(filename)) {
-        sourceCode = loader(sourceCode);
+        for (let loaderPath of use.reverse()) {
+          const loader = require(loaderPath);
+          sourceCode = loader(sourceCode);
+        }
       }
-    });
+    }
+
     // 解析模块代码 根据 babel/parser 解析代码 生成抽象语法树
     const ast = parser.parse(sourceCode, { sourceType: "module" });
     // 抽象语法树 traverse 为字符串
@@ -36,7 +44,7 @@ module.exports = class Compiler {
     traverse(ast, {
       ImportDeclaration({ node }) {
         const dirname = path.dirname(filename);
-        const absPath = "./" + path.join(dirname, node.source.value);
+        const absPath = path.join(dirname, node.source.value);
         deps[node.source.value] = absPath;
       },
     });
@@ -52,26 +60,29 @@ module.exports = class Compiler {
     // 定义一个队列 目前只有与入口文件相关的模块  
     const graphArray = [entryModule];
     // for of 遍历 graphArray 这个队列
-    for (const item of graphArray) {
-      const { deps } = item;
+    for (const module of graphArray) {
+      const { deps } = module;
       if (deps) {
         for (let key in deps) {
-          graphArray.push(this.parse(deps[key]));
+          if (!this.modules[deps[key]]) {
+            const depModule = this.parse(deps[key]);
+            // 缓存已处理模块
+            this.modules[deps[key]] = depModule;
+            graphArray.push(depModule);
+          }
         }
       }
     }
-    // 定义图
+    // 转换图结构
     const graph = {};
-    graphArray.forEach(item => {
-      graph[item.filename] = {
-        deps: item.deps,
-        code: item.code,
-      };
+    graphArray.forEach(({ filename, deps, code }) => {
+      graph[filename] = { deps, code };
     });
     return graph;
   }
   // 生成最后的代码
-  generateCode(graph, entry) {
+  generateCode(graph) {
+    const graphStr = JSON.stringify(graph);
     return `(function(graph){
         function require(file) {
             var exports = {};
@@ -83,23 +94,22 @@ module.exports = class Compiler {
             })(absRequire, exports, graph[file].code)
             return exports
         }
-        require('${entry}')
-    })(${graph})`;
+        require('${this.entry}')
+    })(${graphStr})`;
   }
   // 输出文件
   emitFile(code) {
     const outputPath = path.join(this.output.path, this.output.filename);
-    if (!fs.existsSync(this.output.path)) {
-      fs.mkdirSync(this.output.path)
-    }
+    // 生成文件 判断是否存在文件夹 不存在则创建文件夹 使用 { recursive: true } 避免目录不存在的错误
+    fs.mkdirSync(this.output.path, { recursive: true });
     fs.writeFileSync(outputPath, code)
   }
   // 串联所有方法
   run() {
-    console.log('开始打包');
-    const graph = JSON.stringify(this.buildDepsGraph(this.entry));
-    const code = this.generateCode(graph, this.entry);
+    console.log('开始打包...');
+    const graph = this.buildDepsGraph(this.entry);
+    const code = this.generateCode(graph);
     this.emitFile(code);
-    console.log('打包完成');
+    console.log('打包完成。');
   }
 }
