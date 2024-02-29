@@ -1,1 +1,1 @@
-export const name = "webpack";
+export let name = "webpack";
