@@ -7,6 +7,5 @@ module.exports = function myLoader(source) {
 
   ${source};
   `
-  console.log("🚀 ~ myLoader ~ value:", value)
   return value;
 }

@@ -5,6 +5,7 @@
 // webpack 遵循 CommonJS 模块规范，所以配置文件可以使用 require
 
 const path = require('path');
+const ChangeFilenamePlugin = require('./example/changeFilenamePlugin.js');
 
 module.exports = {
   // 定义入口文件
@@ -29,5 +30,6 @@ module.exports = {
         use: [path.resolve(__dirname, 'example/jsonLoader.js')]
       },
     ]
-  }
+  },
+  plugins:[ new ChangeFilenamePlugin()]
 }
