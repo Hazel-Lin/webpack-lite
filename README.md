@@ -4,5 +4,5 @@
 
 - [x] 打包核心逻辑
 - [x] loader
-- [ ] plugin
+- [x] plugin
 - [ ] hmr
