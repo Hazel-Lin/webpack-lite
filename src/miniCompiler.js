@@ -99,8 +99,8 @@ module.exports = class Compiler {
   /**
    * 初始化插件
    */
-  initPlugins(){
-    if(!this.plugins.length) return
+  initPlugins() {
+    if (!this.plugins.length) return
     this.plugins.forEach(plugin => {
       plugin.apply(this)
     })
@@ -141,11 +141,33 @@ module.exports = class Compiler {
     fs.writeFileSync(outputPath, code)
   }
 
+  hmr() {
+    // 实现 hmr
+    const ws = new WebSocket("ws://localhost:8080");
+    ws.onopen = function () {
+      console.log("WebSocket connected.");
+    };
+    ws.onmessage = function (event) {
+      const message = JSON.parse(event.data);
+
+      if (message.type === "moduleAdded") {
+        console.log(`Module ${message.moduleId} added.`);
+      } else if (message.type === "moduleUpdated") {
+        console.log(`Module ${message.moduleId} updated.`);
+        // 重新加载模块
+        const updatedModule = loadModule(message.moduleId);
+        console.log(updatedModule);
+      }
+    };
+  }
+
   /**
    * 执行打包过程
    */
   run() {
     console.log('开始打包...');
+    // 实现 hmr
+    hmr()
     const graph = this.buildDepsGraph(this.entry);
     this.initPlugins()
     const code = this.generateCode(graph);
